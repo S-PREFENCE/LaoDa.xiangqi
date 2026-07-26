@@ -24,6 +24,8 @@
     messageType: '',
     aiThinking: false,
     currentLevelId: null,
+    endReason: null,            // 本局结束原因：'no-moves'(被将死/困毙)
+    checkmateAudioPlayed: false, // 绝杀音频每局仅播放一次
 
     /* ---------- 初始化 ---------- */
     init: function () {
@@ -99,6 +101,8 @@
       this.winner = null;
       this.banner = null;
       this.aiThinking = false;
+      this.endReason = null;
+      this.checkmateAudioPlayed = false;
     },
 
     restart: function () {
@@ -188,6 +192,7 @@
       if (res.over) {
         this.gameOver = true;
         this.winner = res.winner;
+        this.endReason = res.reason;
         this.handleEnd();
       } else if (inChk) {
         this.message = '将军！';
@@ -213,7 +218,13 @@
         sub = '点击重新开始'; win = true;
       }
       this.banner = { title: title, sub: sub };
-      XQ.Audio.play(win ? 'win' : 'lose');
+      // 绝杀结算：仅当「被将死/困毙」(no-moves) 且本局尚未播放过时播放曼巴熬音频，否则用合成音
+      if (this.endReason === 'no-moves' && !this.checkmateAudioPlayed) {
+        XQ.Audio.play('checkmate');
+        this.checkmateAudioPlayed = true;
+      } else {
+        XQ.Audio.play(win ? 'win' : 'lose');
+      }
     },
 
     diffName: function () {
