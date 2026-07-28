@@ -103,6 +103,7 @@
       this.aiThinking = false;
       this.endReason = null;
       this.checkmateAudioPlayed = false;
+      this.positions = [{ pos: XQ.boardKey(this.board), turn: this.turn }];
     },
 
     restart: function () {
@@ -181,6 +182,8 @@
       XQ.Audio.play(captured ? 'capture' : 'move');
       XQ.UI.impactAt(move.to.r, move.to.c, captured ? 'capture' : 'move');
       this.turn = XQ.opponent(this.turn);
+      this.history[this.history.length - 1].check = XQ.isInCheck(this.board, this.turn);
+      this.positions.push({ pos: XQ.boardKey(this.board), turn: this.turn });
       this.clearSelection();
       this.updateCheckAndEnd();
     },
@@ -194,6 +197,20 @@
         this.winner = res.winner;
         this.endReason = res.reason;
         this.handleEnd();
+        return;
+      }
+      var rep = XQ.analyzeRepetition(this.positions, this.history);
+      if (rep) {
+        this.gameOver = true;
+        if (rep.result === 'perpetual-check') {
+          this.winner = XQ.opponent(rep.loser);
+          this.endReason = 'perpetual-check';
+        } else {
+          this.winner = 'draw';
+          this.endReason = 'draw';
+        }
+        this.handleEnd();
+        return;
       } else if (inChk) {
         this.message = '将军！';
         this.messageType = 'alert';
@@ -206,6 +223,11 @@
 
     handleEnd: function () {
       var w = this.winner;
+      if (w === 'draw') {
+        this.banner = { title: '和 棋', sub: '重复局面，判和' };
+        XQ.Audio.play('win');
+        return;
+      }
       var title, sub, win = false;
       if (this.mode === 'endgame') {
         if (w === 'red') { title = '过 关 !'; sub = '第' + this.currentLevelId + '关 通关'; win = true; }
